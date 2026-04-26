@@ -9,8 +9,8 @@ from dotenv import load_dotenv
 from flask import Flask, flash, redirect, render_template, request, url_for, session
 from datetime import timedelta
 from flask import Flask, render_template, request
-import spotipy
-from spotipy.oauth2 import SpotifyOAuth
+import spotify
+from spotify.oauth2 import SpotifyOAuth
 
 # create the Flask app
 app = Flask(__name__)
@@ -30,11 +30,40 @@ sp_oauth = SpotifyOAuth(
     scope="user-read-private user-read-email playlist-modify-public playlist-modify-private",
 )
 
-# login route
+# helper function to get Spotify client with valid access token
+def get_spotify_client():
+    token_info = session.get("token_info")
+    if not token_info:
+        return None
+    if sp_oauth.is_token_expired(token_info):
+        token_info = sp_oauth.refresh_access_token(token_info["refresh_token"])
+        session["token_info"] = token_info
+    return spotipy.Spotify(auth=token_info["access_token"])
+
+# index route
+@app.route("/")
+def index():
+    # check if user is logged in by looking for token info in session
+    sp = get_spotify_client()
+    if not sp:
+        return redirect(url_for("login"))
+    
+    user_info = sp.current_user()
+    
+    return render_template("index.html", 
+        username=user_info["display_name"],
+        user_image=user_info["images"][0]["url"] if user_info["images"] else None
+    )
+
+
 @app.route("/login")
 def login():
+    # check if user is already logged in
+    if session.get("token_info"):
+        return redirect(url_for("index"))
+    
     auth_url = sp_oauth.get_authorize_url()
-    return redirect(auth_url)
+    return render_template("login.html", auth_url=auth_url)
 
 # callback route for Spotify authentication
 @app.route("/callback")
@@ -47,6 +76,7 @@ def callback():
     user_id = user_info["id"]
     # store user info in session
     session["user_id"] = user_id
+    session["token_info"] = token_info
     session["access_token"] = access_token
     return redirect(url_for("index"))
 
@@ -55,4 +85,5 @@ def callback():
 def logout():
     session.clear()
     return redirect(url_for("index"))
+
 
