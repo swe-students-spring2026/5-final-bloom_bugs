@@ -2,9 +2,14 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+# Install pipenv
+RUN pip install --no-cache-dir pipenv
 
+# Copy Pipfile first (layer caching — only reinstalls if Pipfile changes)
+COPY Pipfile .
+
+# Install dependencies system-wide inside the container (no virtualenv needed)
+RUN pipenv install --system --deploy
 COPY app/ .
 
 EXPOSE 8000
