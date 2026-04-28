@@ -12,6 +12,8 @@ requests = "*"
 spotipy = "*"
 gunicorn = "*"
 async-timeout = "*"
+pytest = "*"
+pytest-cov = "*"
 
 [dev-packages]
 
