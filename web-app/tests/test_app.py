@@ -10,29 +10,6 @@ from unittest.mock import patch, MagicMock
 from app import app
 
 
-# ── Fixtures ──────────────────────────────────────────────────────────────────
-
-@pytest.fixture
-def client():
-    app.config["TESTING"] = True
-    app.config["SECRET_KEY"] = "test-secret"
-    with app.test_client() as c:
-        yield c
-
-
-@pytest.fixture
-def logged_in_client(client):
-    """Client with a valid token_info already in session."""
-    with client.session_transaction() as sess:
-        sess["token_info"] = {
-            "access_token": "fake-access-token",
-            "refresh_token": "fake-refresh-token",
-            "expires_at": 9999999999,   # far future → not expired
-        }
-        sess["user_id"] = "spotify_user_123"
-    return client
-
-
 # ── Helper: fake Spotify user ─────────────────────────────────────────────────
 
 def fake_spotify_user():
@@ -152,34 +129,30 @@ class TestRecommend:
         assert "login" in resp.headers["Location"]
 
     def test_recommend_calls_ml_client(self, logged_in_client):
-        fake_tracks = [
-            {
-                "name": "Good Days",
-                "artists": ["SZA"],
-                "album_art": "https://example.com/art.jpg",
-                "external_url": "https://open.spotify.com/track/123",
-                "uri": "spotify:track:123",
-                "valence": 0.8,
-                "energy": 0.7,
-            }
-        ]
+    
         with patch("app.get_spotify_client") as mock_get_sp, \
-             patch("app.requests.post") as mock_post:
+            patch("app.requests.post") as mock_post, \
+            patch("app.requests.get") as mock_get_weather:
 
+            
             mock_sp = MagicMock()
-            mock_sp.current_user.return_value = fake_spotify_user()
             mock_get_sp.return_value = mock_sp
 
-            mock_resp = MagicMock()
-            mock_resp.json.return_value = {"tracks": fake_tracks}
-            mock_resp.raise_for_status = MagicMock()
-            mock_post.return_value = mock_resp
+            mock_get_weather.return_value.json.return_value = {"main": "Clear"}
+            mock_get_weather.return_value.status_code = 200
+
+            
+            mock_post.return_value.status_code = 200
+            mock_post.return_value.json.return_value = {
+                "tracks": [
+                    {"name": "Good Days", "artist": "SZA", "album_art": "http://example.com/img.jpg"}
+                ],
+                "session_id": "fake-session"
+            }
 
             resp = logged_in_client.post("/recommend", data={
-                "mood_text": "feeling happy today",
-                "energy": "70",
-                "valence": "80",
-                "mood_label": "happy",
+                "mood_text": "happy",
+                "city": "London"
             })
 
         assert resp.status_code == 200
@@ -223,26 +196,37 @@ class TestGetSpotifyClient:
         expired_token = {
             "access_token": "old-token",
             "refresh_token": "refresh-token",
-            "expires_at": 0,   # already expired
+            "expires_at": 0,
         }
         new_token = {
             "access_token": "new-token",
             "refresh_token": "refresh-token",
             "expires_at": 9999999999,
         }
-        with app.test_request_context():
-            with client.session_transaction() as sess:
-                sess["token_info"] = expired_token
+        
+        with client.session_transaction() as sess:
+            sess["token_info"] = expired_token
 
-            with patch("app.get_sp_oauth") as mock_oauth, \
-                 patch("app.spotipy.Spotify") as mock_sp_class:
-                mock_oauth().is_token_expired.return_value = True
-                mock_oauth().refresh_access_token.return_value = new_token
-                mock_sp_class.return_value = MagicMock()
+        with patch("app.get_sp_oauth") as mock_oauth, \
+             patch("app.spotipy.Spotify") as mock_sp_class:
+            
+            mock_oauth_instance = mock_oauth.return_value
+            mock_oauth_instance.is_token_expired.return_value = True
+            mock_oauth_instance.refresh_access_token.return_value = new_token
+            
+            mock_sp_instance = MagicMock()
+            mock_sp_class.return_value = mock_sp_instance
 
-                # Need session context to test properly
-                with client.session_transaction() as sess:
-                    sess["token_info"] = expired_token
+    
+            with app.test_request_context():
+                from flask import session
+                session["token_info"] = expired_token 
+                
+                
+                result = get_spotify_client()
+
+                assert session["token_info"]["access_token"] == "new-token"
+                assert result is not None
 
     def test_returns_client_when_valid_token(self, logged_in_client):
         from app import get_spotify_client
