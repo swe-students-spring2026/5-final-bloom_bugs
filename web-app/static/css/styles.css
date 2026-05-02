@@ -928,3 +928,83 @@ body.login-body { display: grid; place-items: center; min-height: 100vh; }
   margin-top: 24px;
   display: inline-block;
 }
+
+/* ── replay banner (shown when viewing a past session) ── */
+.replay-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  margin-bottom: 14px;
+  background: var(--purple-dim);
+  border: 1px solid rgba(127, 119, 221, 0.3);
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  color: var(--text-1);
+}
+.replay-banner-label {
+  font-weight: 500;
+  color: var(--purple);
+}
+.replay-banner-meta {
+  flex: 1;
+  color: var(--text-2);
+  font-size: 12.5px;
+}
+.replay-banner-back {
+  color: var(--text-1);
+  text-decoration: none;
+  font-size: 12.5px;
+  padding: 5px 11px;
+  border-radius: 14px;
+  border: 1px solid var(--border-hover);
+  white-space: nowrap;
+  transition: background 0.15s, border-color 0.15s;
+}
+.replay-banner-back:hover {
+  background: var(--bg-card);
+  border-color: var(--purple);
+}
+
+/* ── history page row link ── */
+.history-item {
+  padding: 0;
+  overflow: hidden;
+}
+.history-item-link {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
+  text-decoration: none;
+  color: inherit;
+  transition: background 0.15s;
+}
+.history-item-link:hover {
+  background: var(--bg-card-hi);
+}
+.history-item-link:focus-visible {
+  outline: 2px solid var(--border-focus);
+  outline-offset: -2px;
+}
+.history-item-link > .history-item-text {
+  flex-grow: 1 !important;
+  flex-shrink: 1 !important;
+  flex-basis: auto !important;
+  min-width: 0 !important;
+}
+.history-item-link > .history-item-date {
+  margin-left: auto !important;
+  flex-shrink: 0 !important;
+}
+.history-item-arrow {
+  color: var(--text-3);
+  font-size: 16px;
+  flex-shrink: 0;
+  transition: color 0.15s, transform 0.15s;
+}
+.history-item-link:hover .history-item-arrow {
+  color: var(--purple);
+  transform: translateX(2px);
+}

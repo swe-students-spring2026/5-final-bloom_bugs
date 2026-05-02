@@ -9,21 +9,46 @@
   const energyVal = document.getElementById("energy-val");
   const valenceVal = document.getElementById("valence-val");
 
-  if (energySlider && energyVal) {
-    energySlider.addEventListener("input", () => {
-      energyVal.textContent = energySlider.value;
-    });
+  // turn the energy + valence pair into a short readable mood label
+  function describeSliders(energy, valence) {
+    const e = parseInt(energy, 10);
+    const v = parseInt(valence, 10);
+    const energyLabel = e >= 75 ? "energetic" : e <= 25 ? "mellow" : "moderate";
+    const valenceLabel = v >= 75 ? "upbeat" : v <= 25 ? "somber" : "neutral";
+    return `feeling ${energyLabel} and ${valenceLabel}`;
   }
-  if (valenceSlider && valenceVal) {
-    valenceSlider.addEventListener("input", () => {
-      valenceVal.textContent = valenceSlider.value;
-    });
+
+  function onSliderChange() {
+    if (energyVal) energyVal.textContent = energySlider ? energySlider.value : "";
+    if (valenceVal) valenceVal.textContent = valenceSlider ? valenceSlider.value : "";
+
+    // user is in custom mode now — clear any active emoji
+    document.querySelectorAll(".emoji-btn.active").forEach((b) => b.classList.remove("active"));
+    if (moodLabelInput) moodLabelInput.value = "";
+
+    // refresh the textarea hint if the user hasn't typed their own
+    if (moodTextarea && textareaIsEmojiOwned && energySlider && valenceSlider) {
+      moodTextarea.value = describeSliders(energySlider.value, valenceSlider.value);
+    }
   }
+
+  if (energySlider) energySlider.addEventListener("input", onSliderChange);
+  if (valenceSlider) valenceSlider.addEventListener("input", onSliderChange);
 
   // ── emoji mood buttons ──
   const moodLabelInput = document.getElementById("mood-label");
   const moodTextarea = document.getElementById("mood-text");
-  let emojiAutoFilled = false;
+
+  // track whether the textarea text came from emoji clicks (vs. user typing)
+  // start true if textarea is empty so the first click always fills it
+  let textareaIsEmojiOwned = !moodTextarea || !moodTextarea.value.trim();
+
+  // user typing flips ownership back to "manual" and we won't overwrite
+  if (moodTextarea) {
+    moodTextarea.addEventListener("input", () => {
+      textareaIsEmojiOwned = false;
+    });
+  }
 
   document.querySelectorAll(".emoji-btn").forEach((btn) => {
     btn.addEventListener("click", () => {
@@ -39,19 +64,14 @@
         if (valenceVal) valenceVal.textContent = btn.dataset.valence;
       }
       if (moodLabelInput) moodLabelInput.value = btn.dataset.mood || "";
-      // auto-fill textarea with emoji name on first click if empty
-      if (moodTextarea && (!moodTextarea.value.trim() || emojiAutoFilled)) {
+
+      // overwrite the textarea on every emoji click as long as the user
+      // hasn't typed their own description
+      if (moodTextarea && textareaIsEmojiOwned) {
         moodTextarea.value = btn.textContent.trim();
-        emojiAutoFilled = true; 
       }
     });
   });
-  // if user manually edits textarea, disable auto-fill for future clicks
-  if (moodTextarea) {
-    moodTextarea.addEventListener("input", () => {
-      emojiAutoFilled = false;
-    });
-  }
 
   // restore active emoji when re-rendered after POST
   const savedMoodEl = document.getElementById("saved-mood-label");
