@@ -106,8 +106,18 @@
     {% if tracks %}
       <hr class="divider">
 
+      {% if is_replay %}
+        <div class="replay-banner" role="status">
+          <span class="replay-banner-label">Past session</span>
+          <span class="replay-banner-meta">
+            {% if replay_date %}{{ replay_date.strftime('%b %d, %Y · %I:%M %p') }}{% endif %}
+          </span>
+          <a href="{{ url_for('index') }}" class="replay-banner-back">New search</a>
+        </div>
+      {% endif %}
+
       <div class="results-header">
-        <h2 class="results-title">Your playlist</h2>
+        <h2 class="results-title">{% if is_replay %}Replayed playlist{% else %}Your playlist{% endif %}</h2>
         <span class="results-meta">
           {% if mood_label %}{{ mood_label }} · {% endif %}{{ tracks | length }} tracks
         </span>
@@ -183,7 +193,7 @@
       <h2 class="section-label">Recent searches</h2>
       <div class="history-row">
         {% for item in history %}
-          <a href="{{ url_for('history_page') }}" class="history-pill">
+          <a href="{{ url_for('replay_session', session_id=item._id) }}" class="history-pill" title="Replay this session">
             {{ item.mood_label or '🎵' }}
             · {{ item.created_at.strftime('%b %d') if item.created_at else '' }}
           </a>

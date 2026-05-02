@@ -3,8 +3,10 @@ import datetime
 import os
 import requests
 import pymongo
+from bson.objectid import ObjectId
+from bson.errors import InvalidId
 from dotenv import load_dotenv
-from flask import Flask, flash, redirect, render_template, request, session, url_for
+from flask import Flask, abort, flash, redirect, render_template, request, session, url_for
 import spotipy
 from spotipy.oauth2 import SpotifyOAuth
 from cities import CITIES
@@ -18,6 +20,38 @@ client = pymongo.MongoClient(os.getenv("MONGO_URI", "mongodb://mongo:27017"))
 db = client[os.getenv("MONGO_DB_NAME", "moodmusic")]
 
 ML_SERVICE_URL = os.getenv("ML_SERVICE_URL", "http://ml-service:8000")
+
+
+
+def _augment_mood(mood, mood_label, energy, valence):
+    """Combine free-text mood, picker label, and slider values into a richer prompt
+    for the ML mood parser. The sliders need to actually influence recommendations,
+    so they go into the prompt as descriptive hints."""
+    parts = []
+    base = (mood or "").strip()
+    if base:
+        parts.append(base)
+    elif mood_label:
+        parts.append(mood_label)
+    else:
+        parts.append("neutral")
+
+    try:
+        e = int(energy)
+        v = int(valence)
+    except (TypeError, ValueError):
+        e, v = 50, 50
+
+    if e >= 75:
+        parts.append("high energy")
+    elif e <= 25:
+        parts.append("low energy and mellow")
+    if v >= 75:
+        parts.append("very upbeat and positive")
+    elif v <= 25:
+        parts.append("downcast and somber")
+
+    return ", ".join(parts)
 
 
 def get_sp_oauth():
@@ -46,6 +80,17 @@ def get_recent_history(user_id, limit=5):
         return []
     cursor = db.sessions.find({"user_id": user_id}).sort("created_at", -1).limit(limit)
     return list(cursor)
+
+
+def get_session_by_id(session_id, user_id):
+    """Look up one past session, scoped to the current user so you can't read other people's history."""
+    if not user_id or not session_id:
+        return None
+    try:
+        oid = ObjectId(session_id)
+    except (InvalidId, TypeError):
+        return None
+    return db.sessions.find_one({"_id": oid, "user_id": user_id})
 
 
 # ── Routes ────────────────────────────────────────────────────────────────────
@@ -148,7 +193,7 @@ def recommend():
         predict_resp = requests.post(
             f"{ML_SERVICE_URL}/predict",
             json={
-                "mood": mood or mood_label or "neutral",
+                "mood": _augment_mood(mood, mood_label, energy, valence),
                 "weather": weather,
                 "user_id": user_id,
                 "limit": 10,
@@ -203,17 +248,15 @@ def save_playlist():
 
     if not user_id:
         return redirect(url_for("login"))
-    
+
     sp = get_spotify_client()
     if not sp:
         flash("Spotify authentication required to save playlist.", "error")
         return redirect(url_for("login"))
-    
+
     if track_ids:
-        playlist_name = f"Moodify: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M')}"
         try:
             user_id = sp.current_user()["id"]
-            
             playlist = sp._post("me/playlists", payload={
                 "name": f"Moodify: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M')}",
                 "public": False,
@@ -223,16 +266,15 @@ def save_playlist():
             items = [t for t in track_ids.split(",") if t.strip()]
             if items:
                 sp.playlist_add_items(playlist["id"], items)
-        
+
             db.playlists.insert_one({
                 "user_id": user_id,
                 "tracks": track_ids.split(","),
                 "created_at": datetime.datetime.now(datetime.timezone.utc),
             })
-            
+
             flash("Playlist saved!", "success")
         except Exception as e:
-    
             flash(f"Failed to save playlist: {e}", "error")
     else:
         flash("No tracks to save.", "error")
@@ -252,6 +294,46 @@ def history_page():
         "history.html",
         username=user_info.get("display_name") or user_id,
         history=get_recent_history(user_id, limit=50),
+    )
+
+
+@app.route("/history/<session_id>")
+def replay_session(session_id):
+    """Re-render the index page using the tracks from a past session."""
+    sp = get_spotify_client()
+    if not sp:
+        return redirect(url_for("login"))
+
+    user_info = sp.current_user()
+    user_id = session.get("user_id")
+    past = get_session_by_id(session_id, user_id)
+    if not past:
+        abort(404)
+
+    tracks = past.get("tracks", [])
+    track_ids = [t.get("uri") or t.get("id") for t in tracks if t.get("uri") or t.get("id")]
+
+    weather = past.get("weather") or {}
+    weather_desc = "—"
+    if weather:
+        try:
+            temp_f = round(weather.get("temp", 0) * 9 / 5 + 32)
+            weather_desc = f"{temp_f}°F · {weather.get('condition', '—')}"
+        except (TypeError, ValueError):
+            weather_desc = weather.get("condition", "—")
+
+    return render_template(
+        "index.html",
+        username=user_info.get("display_name") or user_id,
+        tracks=tracks,
+        track_ids=track_ids,
+        history=get_recent_history(user_id),
+        cities=CITIES,
+        weather_desc=weather_desc,
+        mood_text=past.get("mood", ""),
+        mood_label=past.get("mood_label", ""),
+        is_replay=True,
+        replay_date=past.get("created_at"),
     )
 
 
