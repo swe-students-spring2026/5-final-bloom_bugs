@@ -22,7 +22,7 @@ The application is split into multiple containerized subsystems hosted on Docker
 - [Inoo Jung (ij2298-oss)](https://github.com/ij2298-oss)
 - [Hanlin Yan (hanlinyan-dev)](https://github.com/hanlinyan-dev)
 - [Steve Yoo (seonghoyu11)](https://github.com/seonghoyu11)
-- [Qingzhou Zhang (Kairiszqy)](https://github.com/Kairiszqy)
+- [Qingyue Zhang (Kairiszqy)](https://github.com/Kairiszqy)
 
 ## Setup and Configuration
 
