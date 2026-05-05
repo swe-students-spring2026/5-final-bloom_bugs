@@ -62,7 +62,7 @@ Once your `.env` file is properly configured, you can launch all the subsystems 
 1. Open a terminal in the root directory of the project.
 2. Build and run the containers:
    ```bash
-   docker-compose up --build
+   docker-compose up 
    ```
 3. The services will be accessible at:
    - **Web App**: http://localhost:5000
