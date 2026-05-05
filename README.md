@@ -1,11 +1,13 @@
-# Bloom Bugs: Mood Music Recommender
+# Moodify: Mood Music Recommender
 
 [![Web App CI/CD](https://github.com/swe-students-spring2026/5-final-bloom_bugs/actions/workflows/web-app.yml/badge.svg)](https://github.com/swe-students-spring2026/5-final-bloom_bugs/actions/workflows/web-app.yml)
 [![ML Client CI/CD](https://github.com/swe-students-spring2026/5-final-bloom_bugs/actions/workflows/ml-client.yml/badge.svg)](https://github.com/swe-students-spring2026/5-final-bloom_bugs/actions/workflows/ml-client.yml)
 [![Event Logger](https://github.com/swe-students-spring2026/5-final-bloom_bugs/actions/workflows/event-logger.yml/badge.svg)](https://github.com/swe-students-spring2026/5-final-bloom_bugs/actions/workflows/event-logger.yml)
 
+**🌐 Live Demo: [https://bloombugsmoodify.duckdns.org/](https://bloombugsmoodify.duckdns.org/)**
+
 ## 📌 Project Description
-**Bloom Bugs** is an intelligent, context-aware music recommendation web application. By taking a user's current mood and their geographical location (to fetch real-time weather data), our Machine Learning subsystem intelligently curates a customized Spotify playlist that perfectly matches their vibe. 
+**Moodify** is an intelligent, context-aware music recommendation web application. By taking a user's current mood and their geographical location (to fetch real-time weather data), our Machine Learning subsystem intelligently curates a customized Spotify playlist that perfectly matches their vibe. 
 
 This project is built using a microservices architecture with three distinct subsystems:
 1. **Web App (Flask)**: Handles user authentication via Spotify, manages user sessions, and serves the frontend UI.
@@ -24,7 +26,7 @@ You can pull the container images for our custom subsystems directly from Docker
 ## 👥 Meet the Team
 - [Ami Bal (asb9823)](https://github.com/asb9823)
 - [Hanlin Yan (hanlinyan-dev)](https://github.com/hanlinyan-dev)
-- [Qingyue Zhang (Kairiszqy)](https://github.com/Kairiszqy)
+- [Qingyue Zhu (Kairiszqy)](https://github.com/Kairiszqy)
 - [Steve Yoo (seonghoyu11)](https://github.com/seonghoyu11)
 - [Inoo Jung (ij2298-oss)](https://github.com/ij2298-oss)
 
