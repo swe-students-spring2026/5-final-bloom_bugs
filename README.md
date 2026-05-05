@@ -78,3 +78,6 @@ python seed_data.py
 ```
 
 If successful, you will see output indicating that session records and playlists have been inserted into the `moodmusic` database. When you log into the Web App, you should now see populated history.
+
+### 5. Deployment
+Web deployed on digital ocean droplet: [moodify](https://bloombugsmoodify.duckdns.org/)
